@@ -32,4 +32,8 @@ node server.js
 
 ## ライセンス
 
-MIT
+Copyright (c) 2026 yoshi-koba-lab. **All Rights Reserved.**
+
+本ソフトウェアの再配布・ミラーリング・派生物の公開・第三者ホスティングは、
+著作権者の書面による事前許可なく禁止します。詳細は [LICENSE](./LICENSE) を
+ご覧ください。個人での閲覧・ローカル実行・研究目的での利用は自由です。
