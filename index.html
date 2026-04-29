@@ -1,0 +1,2786 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plate Designer</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --border: #d8dde5;
+    --border-strong: #a8b1bf;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --danger: #dc2626;
+    --selected: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+  }
+  header .spacer { flex: 1; }
+  header input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    min-width: 200px;
+  }
+  button {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text);
+  }
+  button:hover { background: #f0f3f8; }
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: var(--accent-hover); }
+  button.danger {
+    color: var(--danger);
+    border-color: #f3c4c4;
+  }
+  button.danger:hover { background: #fef2f2; }
+  button.icon { padding: 4px 8px; font-size: 12px; }
+  select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    padding: 16px;
+    height: calc(100vh - 56px);
+    min-height: 0;
+  }
+
+  #axes-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  #axes-panel h2 {
+    font-size: 13px;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+
+  .axis-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    background: #fafbfc;
+  }
+  .axis-card .axis-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .axis-card input.axis-name {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .axis-card input.axis-name:focus {
+    background: #fff;
+    outline: 1px solid var(--accent);
+  }
+  .axis-values {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .axis-value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .axis-value:hover { background: #fff; }
+  .axis-value-comment {
+    width: 100%;
+    padding: 3px 6px 3px 34px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--muted);
+    background: transparent;
+    font-style: italic;
+  }
+  .axis-value-comment:focus {
+    background: #fff;
+    border-color: var(--border);
+    outline: none;
+    color: var(--text);
+  }
+  .axis-value-comment::placeholder { color: #c0c7d0; }
+  .axis-value input[type="color"] {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0;
+    cursor: pointer;
+    background: #fff;
+  }
+  .axis-value input.value-label {
+    flex: 1;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .axis-value input.value-label:focus {
+    background: #fff;
+    border-color: var(--accent);
+    outline: none;
+  }
+  .axis-value button.apply-btn {
+    padding: 3px 8px;
+    font-size: 11px;
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .axis-value button.apply-btn:hover { background: var(--accent-hover); }
+  .axis-card .axis-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .axis-card .axis-actions button {
+    flex: 1;
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+
+  #plate-area {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+    min-height: 0;
+  }
+
+  #plates-container {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .plate-block {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+  }
+
+  /* Well Memo Table */
+  .well-table-wrap {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+  .well-table-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    user-select: none;
+    padding: 2px 0;
+  }
+  .well-table-toggle:hover { color: var(--text); }
+  .well-table-toggle .arrow { transition: transform 0.15s; display: inline-block; font-size: 10px; }
+  .well-table-toggle .arrow.open { transform: rotate(90deg); }
+  .well-table-filter {
+    display: flex; align-items: center; gap: 8px; margin: 6px 0;
+  }
+  .well-table-filter label { font-size: 11px; color: var(--muted); cursor: pointer; }
+  .well-table-filter input[type="checkbox"] { margin: 0; }
+  .well-memo-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  .well-memo-table th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: #fff;
+  }
+  .well-memo-table td {
+    padding: 3px 6px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+  }
+  .well-memo-table tr.highlighted td {
+    background-color: #dbeafe !important;
+  }
+  .well-memo-table .well-id-cell {
+    font-weight: 600;
+    white-space: nowrap;
+    width: 40px;
+  }
+  .well-memo-table .condition-cell {
+    white-space: nowrap;
+  }
+  .well-memo-table .condition-cell .cond-chip {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-right: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+  .well-memo-table .memo-cell {
+    width: 50%;
+  }
+  .well-memo-table .memo-cell input {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: inherit;
+  }
+  .well-memo-table .memo-cell input:focus {
+    border-color: var(--accent);
+    background: #fff;
+    outline: none;
+  }
+  .well-table-scroll {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .plate-body {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .plate-block-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .plate-name-input {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    flex: 0 1 260px;
+  }
+  .plate-name-input:focus {
+    background: #fff;
+    border-color: var(--accent);
+    outline: none;
+  }
+  .plate-type-select {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  .plate-svg-wrap {
+    display: flex;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+  .plate-notes-panel {
+    width: 240px;
+    flex-shrink: 0;
+    background: #fafbfc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .plate-notes-panel.docked {
+    align-self: stretch;
+  }
+  .plate-notes-panel.floating {
+    position: absolute;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    z-index: 5;
+  }
+  .plate-notes-handle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 5px 8px;
+    background: #eef2f7;
+    border-bottom: 1px solid var(--border);
+    cursor: move;
+    user-select: none;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .plate-notes-handle .dots::before {
+    content: "⋮⋮";
+    letter-spacing: -2px;
+    margin-right: 4px;
+    color: var(--border-strong);
+  }
+  .plate-notes-handle button {
+    padding: 1px 6px;
+    font-size: 10px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .plate-notes {
+    flex: 1;
+    padding: 8px 10px;
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    resize: none;
+    background: transparent;
+    min-height: 100px;
+  }
+  .plate-notes:focus {
+    outline: none;
+  }
+  #project-notes-wrap {
+    margin-top: 6px;
+    border-top: 1px dashed var(--border);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  #project-notes-wrap label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  #project-notes {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    resize: vertical;
+    background: #fafbfc;
+  }
+  #project-notes:focus {
+    background: #fff;
+    border-color: var(--accent);
+    outline: none;
+  }
+  #plate-tabs {
+    display: none;
+  }
+  .plate-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px 7px 10px;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    background: #f1f5f9;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    position: relative;
+    top: 1px;
+  }
+  .plate-tab:hover { background: #e2e8f0; }
+  .plate-tab.active {
+    background: #fff;
+    color: var(--text);
+    border-bottom: 1px solid #fff;
+    font-weight: 600;
+  }
+  .plate-tab input.tab-name {
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+    width: 90px;
+    outline: none;
+  }
+  .plate-tab input.tab-name:focus {
+    border-bottom: 1px solid var(--accent);
+  }
+  .plate-tab .tab-close {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 0 2px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .plate-tab .tab-close:hover { color: var(--danger); }
+  #plate-tab-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 6px;
+  }
+  #plate-tab-actions button {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  #plate-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  #plate-toolbar .toolbar-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  #plate-toolbar .divider {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  #selection-info {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  #plate-main {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    align-items: flex-start;
+  }
+  #plate-svg-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex: 0 0 auto;
+  }
+  svg.plate {
+    user-select: none;
+    max-width: 100%;
+    height: auto;
+  }
+  svg.plate .header-label {
+    font-size: 14px;
+    font-weight: 600;
+    fill: var(--muted);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    cursor: pointer;
+  }
+  svg.plate .header-label:hover { fill: var(--accent); }
+  svg.plate .well-base {
+    fill: #ffffff;
+    stroke: var(--border-strong);
+    stroke-width: 1.5;
+    cursor: pointer;
+    transition: stroke 0.1s;
+  }
+  svg.plate .well-base.selected {
+    stroke: var(--selected);
+    stroke-width: 3;
+  }
+  svg.plate .well-label {
+    fill: var(--text);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  #plate-main {
+    position: relative;
+  }
+  #legend {
+    min-width: 180px;
+    max-width: 360px;
+    background: #fafbfc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+  }
+  #legend.docked {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    padding: 12px 14px;
+    gap: 14px;
+  }
+  #legend.floating {
+    position: absolute;
+    padding: 0 0 12px 0;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    z-index: 10;
+  }
+  #legend-drag-handle {
+    display: none;
+    cursor: move;
+    user-select: none;
+    padding: 6px 10px;
+    background: #eef2f7;
+    border-bottom: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  #legend.floating #legend-drag-handle { display: flex; }
+  #legend-drag-handle .dots::before {
+    content: "⋮⋮";
+    letter-spacing: -2px;
+    margin-right: 6px;
+    color: var(--border-strong);
+  }
+  #legend-drag-handle button {
+    padding: 2px 6px;
+    font-size: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #legend-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  #legend.docked #legend-body { padding: 0; }
+  .legend-axis {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-axis-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  .legend-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+  .legend-label {
+    flex: 1;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .legend-item {
+    flex-wrap: wrap;
+  }
+  .legend-comment {
+    width: 100%;
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+    padding-left: 24px;
+    line-height: 1.3;
+  }
+
+  .empty-msg {
+    color: var(--muted);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .legend-swatch, .axis-swatch {
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .legend-swatch:hover, .axis-swatch:hover { transform: scale(1.15); }
+  .axis-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  #color-popover {
+    position: fixed;
+    background: #fff;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 10px;
+    z-index: 1000;
+    display: none;
+  }
+  #color-popover.open { display: block; }
+  #color-popover .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 22px);
+    gap: 5px;
+  }
+  #color-popover .palette-chip {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  #color-popover .palette-chip:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  #color-popover .popover-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+  #color-popover .popover-actions input[type="color"] {
+    width: 30px;
+    height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0;
+    cursor: pointer;
+  }
+  #color-popover .popover-actions input[type="text"] {
+    flex: 1;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    width: 80px;
+  }
+
+  /* print */
+  @media print {
+    header, #axes-panel, #plate-toolbar { display: none !important; }
+    main { display: block; padding: 0; height: auto; }
+    #plate-area { border: none; box-shadow: none; padding: 0; overflow: visible; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<div id="color-popover">
+  <div class="palette-grid"></div>
+  <div class="popover-actions">
+    <input type="color" id="popover-color-input" title="カスタム色">
+    <input type="text" id="popover-hex-input" placeholder="#RRGGBB" maxlength="7">
+  </div>
+</div>
+
+<header>
+  <h1>Plate Designer <span id="version-badge" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:2px"></span></h1>
+  <input type="text" id="project-name" placeholder="プロトコール名" value="Untitled Protocol">
+  <div class="spacer"></div>
+  <button id="btn-new">新規作成</button>
+  <button id="btn-save">保存 (JSON)</button>
+  <button id="btn-load">読込 (JSON)</button>
+  <input type="file" id="file-input" accept="application/json" style="display:none">
+  <button id="btn-export-png">PNG出力</button>
+  <button id="btn-export-pdf" class="primary">PDF出力</button>
+</header>
+
+<main>
+  <aside id="axes-panel">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <h2>Axes (条件軸)</h2>
+      <button id="btn-add-axis" class="primary icon">+ Axis</button>
+    </div>
+    <div id="axes-list"></div>
+  </aside>
+
+  <section id="plate-area">
+    <div id="plate-toolbar">
+      <div class="toolbar-group">
+        <button id="btn-add-plate" class="primary">+ Plate</button>
+      </div>
+      <div class="divider"></div>
+      <div class="toolbar-group">
+        <button id="btn-select-all">全選択</button>
+        <button id="btn-clear-selection">選択解除</button>
+        <button id="btn-clear-wells" class="danger">選択Wellをクリア</button>
+      </div>
+      <div class="divider"></div>
+      <div class="toolbar-group">
+        <label style="font-size:12px; color:var(--muted);">Font:</label>
+        <select id="font-family" title="フォント種類">
+          <option value="system">System Sans</option>
+          <option value="sans">Helvetica / Arial</option>
+          <option value="serif">Serif (Times)</option>
+          <option value="mono">Monospace</option>
+          <option value="rounded">Rounded Sans</option>
+          <option value="jp-sans">Noto Sans JP</option>
+          <option value="jp-serif">Noto Serif JP</option>
+        </select>
+        <select id="font-size" title="文字サイズ">
+          <option value="auto">Auto</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+          <option value="13">13</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
+        </select>
+        <select id="font-weight" title="太さ">
+          <option value="400">Normal</option>
+          <option value="600">Semibold</option>
+          <option value="700">Bold</option>
+        </select>
+      </div>
+      <div id="selection-info">0 wells selected</div>
+    </div>
+
+    <div id="plate-main">
+      <div id="plates-container"></div>
+      <div id="legend" class="docked">
+        <div id="legend-drag-handle">
+          <span><span class="dots"></span>Legend (ドラッグで移動)</span>
+          <button id="legend-dock-btn" title="プレート横に戻す">Dock</button>
+        </div>
+        <div id="legend-body"></div>
+      </div>
+    </div>
+
+    <div id="project-notes-wrap">
+      <label for="project-notes">Project Notes</label>
+      <textarea id="project-notes" rows="3" placeholder="プロジェクト全体のメモ (実験目的, 日付, 細胞株, 装置設定など)"></textarea>
+    </div>
+  </section>
+</main>
+
+<script>
+//============================================================
+// State
+//============================================================
+const PLATE_LAYOUTS = {
+  6:  { rows: 2, cols: 3 },
+  12: { rows: 3, cols: 4 },
+  24: { rows: 4, cols: 6 },
+  48: { rows: 6, cols: 8 },
+  96: { rows: 8, cols: 12 },
+};
+const ROW_LETTERS = "ABCDEFGHIJKLMNOP";
+const PALETTE = ["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#3b82f6","#8b5cf6","#ec4899","#64748b","#14b8a6","#a855f7","#f43f5e"];
+const FONT_FAMILIES = {
+  system: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic UI", sans-serif',
+  sans: 'Helvetica, Arial, "Hiragino Sans", sans-serif',
+  serif: '"Times New Roman", Times, "Hiragino Mincho ProN", serif',
+  mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+  rounded: '"Hiragino Maru Gothic ProN", "Yu Gothic", "Rounded Mplus 1c", system-ui, sans-serif',
+  "jp-sans": '"Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif',
+  "jp-serif": '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif',
+};
+
+// Version history:
+// 1.0.0  Initial release (6/12/24/48/96-well, axes, save/load)
+// 1.0.1  Browser-only + localStorage autosave
+// 1.0.2  Axes color display next to wells (legend)
+// 1.0.3  Font size fix + custom color picker + axes panel spacing
+// 1.0.4  Draggable legend panel
+// 1.0.5  Multiple plates support
+// 1.0.6  Stacked plate layout (same page, not tabs)
+// 1.0.7  Per-plate draggable notes panel
+// 1.0.8  3-axis well label vertical alignment fix
+// 1.0.9  PDF/PNG WYSIWYG export (notes, legend)
+// 1.0.10 Axis value comments + PDF print-color fix
+// 1.0.11 Undo/Redo (⌘Z / ⌘⇧Z)
+// 1.0.12 Version badge + PDF filename with timestamp
+// 1.0.13 Per-well memo table with selection highlight
+// 1.0.14 New-project button + save/load default to Downloads (linked dirs)
+// 1.0.15 Smart default filename: MMDDYY first, then <base>_revN after save/load
+// 1.0.16 Auto row/column common-condition labels outside the plate grid
+const APP_VERSION = "1.0.16";
+
+const state = {
+  projectName: "Untitled Protocol",
+  plates: [],        // [{id, name, type, wells, selected:Set}]
+  axes: [],          // shared across plates
+  font: { family: "system", size: "auto", weight: "400" },
+};
+function makePlate(type = 24, name = null) {
+  const idx = state.plates.length + 1;
+  return {
+    id: uid("pl"),
+    name: name || ("Plate " + idx),
+    type: Number(type),
+    wells: {},
+    wellMemos: {},
+    selected: new Set(),
+  };
+}
+function totalSelected() {
+  let n = 0;
+  for (const p of state.plates) n += p.selected.size;
+  return n;
+}
+
+let _idCounter = 1;
+function uid(prefix="id") { return prefix + "_" + (_idCounter++) + "_" + Math.random().toString(36).slice(2,7); }
+function paletteColor(i) { return PALETTE[i % PALETTE.length]; }
+
+//============================================================
+// Legend drag
+//============================================================
+let _legendDrag = null;
+function initLegendDrag() {
+  const legend = document.getElementById("legend");
+  const handle = document.getElementById("legend-drag-handle");
+  const body = document.getElementById("legend-body");
+  const dockBtn = document.getElementById("legend-dock-btn");
+
+  function onMouseDown(e, fromBody) {
+    if (e.target.closest("button")) return;
+    if (e.target.closest(".legend-swatch")) return;
+    if (e.button !== 0) return;
+
+    // If docked and dragging from body, convert to floating at current pos
+    if (legend.classList.contains("docked")) {
+      const rect = legend.getBoundingClientRect();
+      const mainRect = document.getElementById("plate-main").getBoundingClientRect();
+      legend.classList.remove("docked");
+      legend.classList.add("floating");
+      legend.style.left = (rect.left - mainRect.left) + "px";
+      legend.style.top = (rect.top - mainRect.top) + "px";
+      legend.style.width = rect.width + "px";
+    }
+
+    const rect = legend.getBoundingClientRect();
+    _legendDrag = {
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+    };
+    e.preventDefault();
+  }
+
+  handle.addEventListener("mousedown", e => onMouseDown(e, false));
+  body.addEventListener("mousedown", e => onMouseDown(e, true));
+
+  document.addEventListener("mousemove", e => {
+    if (!_legendDrag) return;
+    const mainRect = document.getElementById("plate-main").getBoundingClientRect();
+    let left = e.clientX - mainRect.left - _legendDrag.offsetX;
+    let top = e.clientY - mainRect.top - _legendDrag.offsetY;
+    legend.style.left = left + "px";
+    legend.style.top = top + "px";
+  });
+  document.addEventListener("mouseup", () => { _legendDrag = null; });
+
+  dockBtn.addEventListener("click", () => {
+    legend.classList.remove("floating");
+    legend.classList.add("docked");
+    legend.style.left = "";
+    legend.style.top = "";
+    legend.style.width = "";
+  });
+}
+
+//============================================================
+// Color popover
+//============================================================
+const PRESET_COLORS = [
+  "#ef4444","#f97316","#f59e0b","#eab308","#84cc16","#22c55e","#10b981","#14b8a6",
+  "#06b6d4","#0ea5e9","#3b82f6","#6366f1","#8b5cf6","#a855f7","#d946ef","#ec4899",
+  "#f43f5e","#dc2626","#ea580c","#ca8a04","#65a30d","#16a34a","#0891b2","#2563eb",
+  "#7c3aed","#c026d3","#db2777","#be123c","#991b1b","#9a3412","#854d0e","#365314",
+  "#0f172a","#334155","#64748b","#94a3b8","#cbd5e1","#e2e8f0","#f1f5f9","#ffffff",
+];
+let _popoverCallback = null;
+function openColorPopover(anchorEl, currentColor, onPick) {
+  const pop = document.getElementById("color-popover");
+  _popoverCallback = onPick;
+  // Build grid (only once, reuse)
+  const grid = pop.querySelector(".palette-grid");
+  if (grid.children.length === 0) {
+    PRESET_COLORS.forEach(c => {
+      const chip = document.createElement("div");
+      chip.className = "palette-chip";
+      chip.style.background = c;
+      chip.title = c.toUpperCase();
+      chip.addEventListener("click", () => pickColor(c));
+      grid.appendChild(chip);
+    });
+  }
+  document.getElementById("popover-color-input").value = normalizeHex(currentColor);
+  document.getElementById("popover-hex-input").value = currentColor.toUpperCase();
+
+  // Position near anchor
+  pop.classList.add("open");
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  let left = rect.right + 8;
+  let top = rect.top;
+  if (left + popRect.width > window.innerWidth - 8) left = rect.left - popRect.width - 8;
+  if (top + popRect.height > window.innerHeight - 8) top = window.innerHeight - popRect.height - 8;
+  if (top < 8) top = 8;
+  pop.style.left = left + "px";
+  pop.style.top = top + "px";
+}
+function closeColorPopover() {
+  document.getElementById("color-popover").classList.remove("open");
+  _popoverCallback = null;
+}
+function pickColor(c) {
+  if (_popoverCallback) _popoverCallback(c);
+  closeColorPopover();
+}
+function normalizeHex(c) {
+  if (!c) return "#000000";
+  c = c.trim();
+  if (c[0] !== "#") c = "#" + c;
+  if (c.length === 4) c = "#" + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
+  return /^#[0-9a-fA-F]{6}$/.test(c) ? c : "#000000";
+}
+document.addEventListener("click", e => {
+  const pop = document.getElementById("color-popover");
+  if (!pop.classList.contains("open")) return;
+  if (!pop.contains(e.target)) closeColorPopover();
+});
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeColorPopover();
+});
+
+//============================================================
+// Storage helpers
+//============================================================
+const LS_KEY = "plate-protocol-designer:autosave";
+
+function serializeState() {
+  return {
+    version: 3,
+    appVersion: APP_VERSION,
+    projectName: state.projectName,
+    plates: state.plates.map(p => ({
+      id: p.id, name: p.name, type: p.type, wells: p.wells, wellMemos: p.wellMemos || {}, notes: p.notes || "", notesPos: p.notesPos || null
+    })),
+    projectNotes: state.projectNotes || "",
+    axes: state.axes,
+    font: state.font,
+  };
+}
+function loadFromObject(obj) {
+  if (!obj || typeof obj !== "object") return false;
+  state.projectName = obj.projectName || "Untitled Protocol";
+  state.axes = Array.isArray(obj.axes) ? obj.axes : [];
+
+  if (Array.isArray(obj.plates)) {
+    state.plates = obj.plates.map(p => ({
+      id: p.id || uid("pl"),
+      name: p.name || "Plate",
+      type: Number(p.type) || 24,
+      wells: (p.wells && typeof p.wells === "object") ? p.wells : {},
+      wellMemos: (p.wellMemos && typeof p.wellMemos === "object") ? p.wellMemos : {},
+      notes: p.notes || "",
+      notesPos: p.notesPos || null,
+      selected: new Set(),
+    }));
+  } else {
+    // v1 migration
+    state.plates = [{
+      id: uid("pl"),
+      name: "Plate 1",
+      type: Number(obj.plateType) || 24,
+      wells: (obj.wells && typeof obj.wells === "object") ? obj.wells : {},
+      wellMemos: {},
+      selected: new Set(),
+    }];
+  }
+  if (state.plates.length === 0) state.plates.push(makePlate(24));
+
+  state.projectNotes = obj.projectNotes || "";
+  if (obj.font && typeof obj.font === "object") {
+    state.font = {
+      family: obj.font.family || "system",
+      size: obj.font.size || "auto",
+      weight: obj.font.weight || "400",
+    };
+  }
+  document.getElementById("project-name").value = state.projectName;
+  document.getElementById("project-notes").value = state.projectNotes || "";
+  document.getElementById("font-family").value = state.font.family;
+  document.getElementById("font-size").value = String(state.font.size);
+  document.getElementById("font-weight").value = state.font.weight;
+  renderAll();
+  return true;
+}
+function autosave() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(serializeState())); } catch(e) {}
+  pushHistory();
+}
+
+//============================================================
+// Undo / Redo
+//============================================================
+const MAX_HISTORY = 100;
+let _history = [];
+let _historyIdx = -1;
+let _historyPaused = false;
+
+function pushHistory() {
+  if (_historyPaused) return;
+  const snap = JSON.stringify(serializeState());
+  // Don't push duplicates
+  if (_historyIdx >= 0 && _history[_historyIdx] === snap) return;
+  // Trim future states (redo stack) when a new action occurs
+  _history = _history.slice(0, _historyIdx + 1);
+  _history.push(snap);
+  if (_history.length > MAX_HISTORY) _history.shift();
+  _historyIdx = _history.length - 1;
+}
+function undo() {
+  if (_historyIdx <= 0) return;
+  _historyIdx--;
+  restoreFromHistory();
+}
+function redo() {
+  if (_historyIdx >= _history.length - 1) return;
+  _historyIdx++;
+  restoreFromHistory();
+}
+function restoreFromHistory() {
+  _historyPaused = true;
+  try {
+    const obj = JSON.parse(_history[_historyIdx]);
+    loadFromObject(obj);
+    try { localStorage.setItem(LS_KEY, _history[_historyIdx]); } catch(e) {}
+  } finally {
+    _historyPaused = false;
+  }
+}
+function tryRestoreAutosave() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    return loadFromObject(JSON.parse(raw));
+  } catch(e) { return false; }
+}
+
+//============================================================
+// Well utilities
+//============================================================
+function wellId(r, c) { return ROW_LETTERS[r] + (c + 1); }
+function pruneWellsFor(p) {
+  const { rows, cols } = PLATE_LAYOUTS[p.type];
+  const valid = new Set();
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) valid.add(wellId(r,c));
+  for (const k of Object.keys(p.wells)) if (!valid.has(k)) delete p.wells[k];
+  for (const k of Array.from(p.selected)) if (!valid.has(k)) p.selected.delete(k);
+}
+
+//============================================================
+// Axis operations
+//============================================================
+function addAxis() {
+  const idx = state.axes.length;
+  const axis = {
+    id: uid("ax"),
+    name: "Axis " + (idx + 1),
+    values: [
+      { id: uid("v"), label: "Value 1", color: paletteColor(idx*3) },
+      { id: uid("v"), label: "Value 2", color: paletteColor(idx*3 + 1) },
+    ],
+  };
+  state.axes.push(axis);
+  renderAxes(); renderAllPlates(); renderLegend(); autosave();
+}
+function deleteAxis(axisId) {
+  if (!confirm("このAxisを削除しますか？関連するWellの値も消えます。")) return;
+  state.axes = state.axes.filter(a => a.id !== axisId);
+  for (const p of state.plates)
+    for (const w of Object.values(p.wells)) delete w[axisId];
+  renderAxes(); renderAllPlates(); renderLegend(); autosave();
+}
+function addAxisValue(axisId) {
+  const axis = state.axes.find(a => a.id === axisId);
+  if (!axis) return;
+  axis.values.push({
+    id: uid("v"),
+    label: "Value " + (axis.values.length + 1),
+    color: paletteColor(axis.values.length + state.axes.indexOf(axis)*3),
+  });
+  renderAxes(); renderLegend(); autosave();
+}
+function deleteAxisValue(axisId, valueId) {
+  const axis = state.axes.find(a => a.id === axisId);
+  if (!axis) return;
+  axis.values = axis.values.filter(v => v.id !== valueId);
+  for (const p of state.plates)
+    for (const w of Object.values(p.wells))
+      if (w[axisId] === valueId) delete w[axisId];
+  renderAxes(); renderAllPlates(); renderLegend(); autosave();
+}
+function applyValueToSelection(axisId, valueId) {
+  if (totalSelected() === 0) {
+    alert("先にWellを選択してください。\n（クリック・ドラッグ・行/列ヘッダー・全選択ボタンで選択できます）");
+    return;
+  }
+  for (const p of state.plates) {
+    for (const wid of p.selected) {
+      if (!p.wells[wid]) p.wells[wid] = {};
+      p.wells[wid][axisId] = valueId;
+    }
+  }
+  renderAllPlates(); autosave();
+}
+function clearAxisFromSelection(axisId) {
+  for (const p of state.plates) {
+    for (const wid of p.selected) {
+      if (p.wells[wid]) delete p.wells[wid][axisId];
+    }
+  }
+  renderAllPlates(); autosave();
+}
+
+//============================================================
+// Selection (per-plate)
+//============================================================
+function setSelectedInPlate(plate, ids, additive=false) {
+  if (!additive) {
+    // Clear only this plate's selection; other plates preserved
+    plate.selected.clear();
+  }
+  for (const id of ids) plate.selected.add(id);
+  renderSinglePlate(plate);
+  updateSelectionInfo();
+  updateWellTableHighlights(plate);
+}
+function toggleWell(plate, id, additive=false) {
+  if (additive) {
+    if (plate.selected.has(id)) plate.selected.delete(id);
+    else plate.selected.add(id);
+  } else {
+    if (plate.selected.size === 1 && plate.selected.has(id)) plate.selected.clear();
+    else { plate.selected.clear(); plate.selected.add(id); }
+  }
+  renderSinglePlate(plate);
+  updateSelectionInfo();
+  updateWellTableHighlights(plate);
+}
+function updateWellTableHighlights(plate) {
+  const table = document.querySelector(`table[data-memo-table="${plate.id}"]`);
+  if (!table) return;
+  table.querySelectorAll("tr[data-well-row]").forEach(tr => {
+    const wid = tr.getAttribute("data-well-row");
+    if (plate.selected.has(wid)) {
+      tr.classList.add("highlighted");
+    } else {
+      tr.classList.remove("highlighted");
+    }
+  });
+}
+function selectAllEverywhere() {
+  for (const p of state.plates) {
+    p.selected.clear();
+    const { rows, cols } = PLATE_LAYOUTS[p.type];
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        p.selected.add(wellId(r, c));
+  }
+  renderAllPlates(); updateSelectionInfo();
+  for (const p of state.plates) updateWellTableHighlights(p);
+}
+function clearAllSelection() {
+  for (const p of state.plates) p.selected.clear();
+  renderAllPlates(); updateSelectionInfo();
+  for (const p of state.plates) updateWellTableHighlights(p);
+}
+function clearSelectedWellsEverywhere() {
+  for (const p of state.plates) {
+    for (const wid of p.selected) delete p.wells[wid];
+  }
+  renderAllPlates(); autosave();
+}
+function updateSelectionInfo() {
+  document.getElementById("selection-info").textContent = totalSelected() + " wells selected";
+}
+
+//============================================================
+// Rendering: Axes panel
+//============================================================
+function renderAxes() {
+  const root = document.getElementById("axes-list");
+  root.innerHTML = "";
+  if (state.axes.length === 0) {
+    const e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "右上の + Axis ボタンで条件軸を追加してください。例: Drug, Concentration, Time など。";
+    root.appendChild(e);
+    return;
+  }
+  for (const axis of state.axes) {
+    const card = document.createElement("div");
+    card.className = "axis-card";
+
+    // header
+    const head = document.createElement("div");
+    head.className = "axis-header";
+    const nameInp = document.createElement("input");
+    nameInp.type = "text"; nameInp.className = "axis-name"; nameInp.value = axis.name;
+    nameInp.addEventListener("input", e => { axis.name = e.target.value; renderLegend(); autosave(); });
+    head.appendChild(nameInp);
+    const delBtn = document.createElement("button");
+    delBtn.className = "icon danger"; delBtn.textContent = "×"; delBtn.title = "Axisを削除";
+    delBtn.addEventListener("click", () => deleteAxis(axis.id));
+    head.appendChild(delBtn);
+    card.appendChild(head);
+
+    // values
+    const valsWrap = document.createElement("div");
+    valsWrap.className = "axis-values";
+    for (const v of axis.values) {
+      const row = document.createElement("div");
+      row.className = "axis-value";
+
+      const swatch = document.createElement("div");
+      swatch.className = "axis-swatch";
+      swatch.style.background = v.color;
+      swatch.title = "クリックで色を変更";
+      swatch.addEventListener("click", e => {
+        e.stopPropagation();
+        openColorPopover(swatch, v.color, (newColor) => {
+          v.color = newColor;
+          swatch.style.background = newColor;
+          renderAllPlates(); renderLegend(); autosave();
+        });
+      });
+      row.appendChild(swatch);
+
+      const labelInp = document.createElement("input");
+      labelInp.type = "text"; labelInp.className = "value-label"; labelInp.value = v.label;
+      labelInp.addEventListener("input", e => { v.label = e.target.value; renderAllPlates(); renderLegend(); autosave(); });
+      row.appendChild(labelInp);
+
+      const applyBtn = document.createElement("button");
+      applyBtn.className = "apply-btn"; applyBtn.textContent = "Apply";
+      applyBtn.title = "選択中のWellに適用";
+      applyBtn.addEventListener("click", () => applyValueToSelection(axis.id, v.id));
+      row.appendChild(applyBtn);
+
+      const xBtn = document.createElement("button");
+      xBtn.className = "icon"; xBtn.textContent = "×"; xBtn.title = "値を削除";
+      xBtn.addEventListener("click", () => deleteAxisValue(axis.id, v.id));
+      row.appendChild(xBtn);
+
+      const commentInp = document.createElement("input");
+      commentInp.type = "text";
+      commentInp.className = "axis-value-comment";
+      commentInp.value = v.comment || "";
+      commentInp.placeholder = "コメント…";
+      commentInp.addEventListener("input", e => { v.comment = e.target.value; renderLegend(); autosave(); });
+      row.appendChild(commentInp);
+
+      valsWrap.appendChild(row);
+    }
+    card.appendChild(valsWrap);
+
+    // actions
+    const actions = document.createElement("div");
+    actions.className = "axis-actions";
+    const addValBtn = document.createElement("button");
+    addValBtn.textContent = "+ 値を追加";
+    addValBtn.addEventListener("click", () => addAxisValue(axis.id));
+    actions.appendChild(addValBtn);
+    const clearBtn = document.createElement("button");
+    clearBtn.textContent = "選択からこのAxisを外す";
+    clearBtn.addEventListener("click", () => clearAxisFromSelection(axis.id));
+    actions.appendChild(clearBtn);
+    card.appendChild(actions);
+
+    root.appendChild(card);
+  }
+}
+
+//============================================================
+// Rendering: Plate SVG
+//============================================================
+const PLATE_PADDING = 36;
+const HEADER_GAP = 24;
+const WELL_PADDING = 6;
+
+function plateMetrics(type) {
+  const { rows, cols } = PLATE_LAYOUTS[type];
+  // Choose well diameter based on plate type for nice fit
+  const wellSize = type >= 96 ? 44 : type >= 48 ? 56 : type >= 24 ? 70 : 88;
+  const colWidth = wellSize + WELL_PADDING * 2;
+  const rowHeight = wellSize + WELL_PADDING * 2;
+  const width = PLATE_PADDING * 2 + HEADER_GAP + cols * colWidth;
+  const height = PLATE_PADDING * 2 + HEADER_GAP + rows * rowHeight;
+  return { rows, cols, wellSize, colWidth, rowHeight, width, height };
+}
+function wellCenter(r, c, m) {
+  const cx = PLATE_PADDING + HEADER_GAP + c * m.colWidth + m.colWidth / 2;
+  const cy = PLATE_PADDING + HEADER_GAP + r * m.rowHeight + m.rowHeight / 2;
+  return { cx, cy };
+}
+
+let _drag = null; // { plate, startR, startC, additive }
+
+function renderSinglePlate(plate) {
+  pruneWellsFor(plate);
+  const svg = document.querySelector(`svg.plate[data-plate-id="${plate.id}"]`);
+  if (!svg) return;
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const m = plateMetrics(plate.type);
+  const fontFamily = FONT_FAMILIES[state.font.family] || FONT_FAMILIES.system;
+  const fontWeight = state.font.weight || "400";
+  svg.style.fontFamily = fontFamily;
+
+  // Compute per-axis row/column uniformity for outside labels
+  const SLOT_W = 56; // width of one row-axis label column
+  const SLOT_H = 18; // height of one col-axis label row
+  const rowAxes = [];   // [{axis, vals: [valueId|null]*rows}]
+  const colAxes = [];   // [{axis, vals: [valueId|null]*cols}]
+  for (const axis of state.axes) {
+    const ru = new Array(m.rows).fill(null);
+    const cu = new Array(m.cols).fill(null);
+    let hasR = false, hasC = false;
+    for (let r = 0; r < m.rows; r++) {
+      let v0 = null, allSame = true, anyAssigned = false;
+      for (let c = 0; c < m.cols; c++) {
+        const wd = plate.wells[wellId(r,c)] || {};
+        const val = wd[axis.id] || null;
+        if (val) anyAssigned = true;
+        if (c === 0) v0 = val;
+        else if (val !== v0) { allSame = false; break; }
+      }
+      if (allSame && anyAssigned && v0) { ru[r] = v0; hasR = true; }
+    }
+    for (let c = 0; c < m.cols; c++) {
+      let v0 = null, allSame = true, anyAssigned = false;
+      for (let r = 0; r < m.rows; r++) {
+        const wd = plate.wells[wellId(r,c)] || {};
+        const val = wd[axis.id] || null;
+        if (val) anyAssigned = true;
+        if (r === 0) v0 = val;
+        else if (val !== v0) { allSame = false; break; }
+      }
+      if (allSame && anyAssigned && v0) { cu[c] = v0; hasC = true; }
+    }
+    if (hasR) rowAxes.push({ axis, vals: ru });
+    if (hasC) colAxes.push({ axis, vals: cu });
+  }
+  const extraLeft = rowAxes.length * SLOT_W;
+  const extraTop  = colAxes.length * SLOT_H;
+
+  svg.setAttribute("viewBox", `${-extraLeft} ${-extraTop} ${m.width + extraLeft} ${m.height + extraTop}`);
+  svg.setAttribute("width", m.width + extraLeft);
+  svg.setAttribute("height", m.height + extraTop);
+
+  // Plate background
+  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  bg.setAttribute("x", PLATE_PADDING - 12);
+  bg.setAttribute("y", PLATE_PADDING - 12);
+  bg.setAttribute("width", m.width - (PLATE_PADDING - 12) * 2);
+  bg.setAttribute("height", m.height - (PLATE_PADDING - 12) * 2);
+  bg.setAttribute("rx", 14);
+  bg.setAttribute("fill", "#f8fafc");
+  bg.setAttribute("stroke", "#cbd5e1");
+  bg.setAttribute("stroke-width", "1.5");
+  svg.appendChild(bg);
+
+  // Column headers (1..N) — clickable to select column
+  for (let c = 0; c < m.cols; c++) {
+    const { cx } = wellCenter(0, c, m);
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", cx);
+    t.setAttribute("y", PLATE_PADDING + HEADER_GAP / 2);
+    t.setAttribute("class", "header-label");
+    t.setAttribute("font-family", fontFamily);
+    t.textContent = String(c + 1);
+    t.addEventListener("click", e => {
+      const ids = [];
+      for (let r = 0; r < m.rows; r++) ids.push(wellId(r, c));
+      setSelectedInPlate(plate, ids, e.shiftKey || e.metaKey || e.ctrlKey);
+    });
+    svg.appendChild(t);
+  }
+  // Row headers (A..) — clickable to select row
+  for (let r = 0; r < m.rows; r++) {
+    const { cy } = wellCenter(r, 0, m);
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", PLATE_PADDING + HEADER_GAP / 2);
+    t.setAttribute("y", cy);
+    t.setAttribute("class", "header-label");
+    t.setAttribute("font-family", fontFamily);
+    t.textContent = ROW_LETTERS[r];
+    t.addEventListener("click", e => {
+      const ids = [];
+      for (let c = 0; c < m.cols; c++) ids.push(wellId(r, c));
+      setSelectedInPlate(plate, ids, e.shiftKey || e.metaKey || e.ctrlKey);
+    });
+    svg.appendChild(t);
+  }
+
+  // Wells
+  for (let r = 0; r < m.rows; r++) {
+    for (let c = 0; c < m.cols; c++) {
+      const id = wellId(r, c);
+      const { cx, cy } = wellCenter(r, c, m);
+      const radius = m.wellSize / 2;
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("data-well", id);
+      g.setAttribute("data-r", r);
+      g.setAttribute("data-c", c);
+
+      // Base circle
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", cx);
+      circle.setAttribute("cy", cy);
+      circle.setAttribute("r", radius);
+      circle.setAttribute("class", "well-base" + (plate.selected.has(id) ? " selected" : ""));
+      g.appendChild(circle);
+
+      // Color stripes from axis values
+      const wellData = plate.wells[id] || {};
+      const activeAxes = state.axes.filter(a => wellData[a.id]);
+      if (activeAxes.length > 0) {
+        // Use a clipPath to keep stripes inside the circle
+        const clipId = "clip_" + id;
+        const clip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+        clip.setAttribute("id", clipId);
+        const clipCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        clipCircle.setAttribute("cx", cx);
+        clipCircle.setAttribute("cy", cy);
+        clipCircle.setAttribute("r", radius - 2);
+        clip.appendChild(clipCircle);
+        svg.appendChild(clip);
+
+        const stripeH = (radius * 2 - 4) / activeAxes.length;
+        const top = cy - radius + 2;
+        activeAxes.forEach((axis, i) => {
+          const v = axis.values.find(vv => vv.id === wellData[axis.id]);
+          if (!v) return;
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", cx - radius);
+          rect.setAttribute("y", top + i * stripeH);
+          rect.setAttribute("width", radius * 2);
+          rect.setAttribute("height", stripeH);
+          rect.setAttribute("fill", v.color);
+          rect.setAttribute("opacity", "0.85");
+          rect.setAttribute("clip-path", `url(#${clipId})`);
+          rect.setAttribute("pointer-events", "none");
+          g.appendChild(rect);
+        });
+      }
+
+      // Labels — position each label at the vertical center of its corresponding stripe
+      const autoFontSize = m.wellSize >= 70 ? 10 : m.wellSize >= 56 ? 9 : 8;
+      const fontSize = state.font.size === "auto" ? autoFontSize : Number(state.font.size);
+      const stripeH = activeAxes.length > 0 ? (radius * 2 - 4) / activeAxes.length : 0;
+      const stripeTop = cy - radius + 2;
+      for (let i = 0; i < activeAxes.length; i++) {
+        const axis = activeAxes[i];
+        const v = axis.values.find(vv => vv.id === wellData[axis.id]);
+        if (!v) continue;
+        const labelY = stripeTop + i * stripeH + stripeH / 2;
+        const useFontSize = Math.min(fontSize, stripeH * 0.75);
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", cx);
+        t.setAttribute("y", labelY);
+        t.setAttribute("class", "well-label");
+        t.setAttribute("font-size", useFontSize);
+        t.setAttribute("font-weight", fontWeight);
+        t.setAttribute("font-family", fontFamily);
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("dominant-baseline", "central");
+        t.setAttribute("fill", isDark(v.color) ? "#ffffff" : "#0f172a");
+        const label = v.label;
+        t.textContent = label.length > 10 ? label.slice(0,9) + "…" : label;
+        g.appendChild(t);
+      }
+
+      // Well name when no labels
+      if (activeAxes.length === 0) {
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", cx);
+        t.setAttribute("y", cy);
+        t.setAttribute("class", "well-label");
+        t.setAttribute("font-size", fontSize);
+        t.setAttribute("font-weight", fontWeight);
+        t.setAttribute("font-family", fontFamily);
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("dominant-baseline", "middle");
+        t.setAttribute("fill", "#94a3b8");
+        t.textContent = id;
+        g.appendChild(t);
+      }
+
+      // Drag selection events
+      g.addEventListener("mousedown", e => {
+        e.preventDefault();
+        _drag = { plate, startR: r, startC: c, additive: e.shiftKey || e.metaKey || e.ctrlKey, moved: false };
+      });
+      g.addEventListener("mouseenter", e => {
+        if (!_drag || _drag.plate !== plate) return;
+        _drag.moved = true;
+        const r1 = Math.min(_drag.startR, r), r2 = Math.max(_drag.startR, r);
+        const c1 = Math.min(_drag.startC, c), c2 = Math.max(_drag.startC, c);
+        const ids = [];
+        for (let rr = r1; rr <= r2; rr++)
+          for (let cc = c1; cc <= c2; cc++)
+            ids.push(wellId(rr, cc));
+        if (_drag.additive) {
+          const merged = new Set(plate.selected);
+          ids.forEach(i => merged.add(i));
+          setSelectedInPlate(plate, Array.from(merged));
+        } else {
+          setSelectedInPlate(plate, ids);
+        }
+      });
+
+      svg.appendChild(g);
+    }
+  }
+
+  // ── Row-uniform axis labels (left of A/B/C…) ──
+  rowAxes.forEach((entry, ai) => {
+    const slotCenterX = -(rowAxes.length - ai) * SLOT_W + SLOT_W / 2;
+    // axis name header (above the column of labels)
+    const head = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    head.setAttribute("x", slotCenterX);
+    head.setAttribute("y", PLATE_PADDING + HEADER_GAP / 2);
+    head.setAttribute("text-anchor", "middle");
+    head.setAttribute("dominant-baseline", "central");
+    head.setAttribute("font-family", fontFamily);
+    head.setAttribute("font-size", "10");
+    head.setAttribute("font-weight", "600");
+    head.setAttribute("fill", "#475569");
+    head.textContent = entry.axis.name.length > 8 ? entry.axis.name.slice(0,7)+"…" : entry.axis.name;
+    svg.appendChild(head);
+
+    for (let r = 0; r < m.rows; r++) {
+      const valId = entry.vals[r];
+      if (!valId) continue;
+      const v = entry.axis.values.find(vv => vv.id === valId);
+      if (!v) continue;
+      const { cy } = wellCenter(r, 0, m);
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      const rectW = SLOT_W - 6;
+      const rectH = 20;
+      rect.setAttribute("x", slotCenterX - rectW / 2);
+      rect.setAttribute("y", cy - rectH / 2);
+      rect.setAttribute("width", rectW);
+      rect.setAttribute("height", rectH);
+      rect.setAttribute("rx", 4);
+      rect.setAttribute("fill", v.color);
+      rect.setAttribute("opacity", "0.85");
+      rect.setAttribute("stroke", "rgba(0,0,0,0.1)");
+      svg.appendChild(rect);
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", slotCenterX);
+      t.setAttribute("y", cy);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("dominant-baseline", "central");
+      t.setAttribute("font-family", fontFamily);
+      t.setAttribute("font-size", "10");
+      t.setAttribute("font-weight", fontWeight);
+      t.setAttribute("fill", isDark(v.color) ? "#fff" : "#0f172a");
+      const lbl = v.label;
+      t.textContent = lbl.length > 9 ? lbl.slice(0,8) + "…" : lbl;
+      svg.appendChild(t);
+    }
+  });
+
+  // ── Column-uniform axis labels (above 1/2/3…) ──
+  colAxes.forEach((entry, ai) => {
+    const slotCenterY = -(colAxes.length - ai) * SLOT_H + SLOT_H / 2;
+    // axis name header (left of the row of labels)
+    const head = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    head.setAttribute("x", PLATE_PADDING + HEADER_GAP / 2);
+    head.setAttribute("y", slotCenterY);
+    head.setAttribute("text-anchor", "middle");
+    head.setAttribute("dominant-baseline", "central");
+    head.setAttribute("font-family", fontFamily);
+    head.setAttribute("font-size", "9");
+    head.setAttribute("font-weight", "600");
+    head.setAttribute("fill", "#475569");
+    head.textContent = entry.axis.name.length > 6 ? entry.axis.name.slice(0,5)+"…" : entry.axis.name;
+    svg.appendChild(head);
+
+    for (let c = 0; c < m.cols; c++) {
+      const valId = entry.vals[c];
+      if (!valId) continue;
+      const v = entry.axis.values.find(vv => vv.id === valId);
+      if (!v) continue;
+      const { cx } = wellCenter(0, c, m);
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      const rectW = m.colWidth - 6;
+      const rectH = SLOT_H - 4;
+      rect.setAttribute("x", cx - rectW / 2);
+      rect.setAttribute("y", slotCenterY - rectH / 2);
+      rect.setAttribute("width", rectW);
+      rect.setAttribute("height", rectH);
+      rect.setAttribute("rx", 3);
+      rect.setAttribute("fill", v.color);
+      rect.setAttribute("opacity", "0.85");
+      rect.setAttribute("stroke", "rgba(0,0,0,0.1)");
+      svg.appendChild(rect);
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", cx);
+      t.setAttribute("y", slotCenterY);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("dominant-baseline", "central");
+      t.setAttribute("font-family", fontFamily);
+      t.setAttribute("font-size", "9");
+      t.setAttribute("font-weight", fontWeight);
+      t.setAttribute("fill", isDark(v.color) ? "#fff" : "#0f172a");
+      const lbl = v.label;
+      t.textContent = lbl.length > 7 ? lbl.slice(0,6) + "…" : lbl;
+      svg.appendChild(t);
+    }
+  });
+
+  updateSelectionInfo();
+}
+
+function isDark(hex) {
+  if (!hex) return false;
+  const c = hex.replace("#","");
+  if (c.length !== 6) return false;
+  const r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return lum < 0.55;
+}
+
+// Global mouseup ends drag, but if no movement happened, treat as click (toggle)
+window.addEventListener("mouseup", e => {
+  if (!_drag) return;
+  if (!_drag.moved) {
+    const id = wellId(_drag.startR, _drag.startC);
+    toggleWell(_drag.plate, id, _drag.additive);
+  }
+  _drag = null;
+});
+
+//============================================================
+// Rendering: Legend
+//============================================================
+function renderLegend() {
+  const root = document.getElementById("legend-body");
+  root.innerHTML = "";
+  if (state.axes.length === 0) {
+    root.innerHTML = '<div class="empty-msg">凡例はAxisを追加すると表示されます。</div>';
+    return;
+  }
+  for (const axis of state.axes) {
+    const col = document.createElement("div");
+    col.className = "legend-axis";
+    const name = document.createElement("div");
+    name.className = "legend-axis-name";
+    name.textContent = axis.name;
+    col.appendChild(name);
+    for (const v of axis.values) {
+      const item = document.createElement("div");
+      item.className = "legend-item";
+      const sw = document.createElement("div");
+      sw.className = "legend-swatch";
+      sw.style.background = v.color;
+      sw.title = "クリックで色を変更";
+      sw.addEventListener("click", e => {
+        e.stopPropagation();
+        openColorPopover(sw, v.color, (newColor) => {
+          v.color = newColor;
+          renderAllPlates(); renderAxes(); renderLegend(); autosave();
+        });
+      });
+      item.appendChild(sw);
+      const lbl = document.createElement("span");
+      lbl.className = "legend-label";
+      lbl.textContent = v.label;
+      item.appendChild(lbl);
+      if (v.comment) {
+        const cmt = document.createElement("div");
+        cmt.className = "legend-comment";
+        cmt.textContent = v.comment;
+        item.appendChild(cmt);
+      }
+      col.appendChild(item);
+    }
+    root.appendChild(col);
+  }
+}
+
+//============================================================
+// Plate management (multi-plate) — stacked layout
+//============================================================
+function renderAllPlates() {
+  const container = document.getElementById("plates-container");
+  // Remember which well tables were open
+  const openTables = new Set();
+  container.querySelectorAll(".well-table-wrap").forEach(w => {
+    const inner = w.querySelector(".well-table-wrap > div:last-child");
+    if (inner && inner.style.display !== "none") {
+      const pid = w.getAttribute("data-plate-table");
+      if (pid) openTables.add(pid);
+    }
+  });
+  container.innerHTML = "";
+  for (const p of state.plates) {
+    container.appendChild(buildPlateBlock(p));
+    renderSinglePlate(p);
+  }
+  // Re-open previously open well tables
+  for (const pid of openTables) {
+    const wrap = container.querySelector(`.well-table-wrap[data-plate-table="${pid}"]`);
+    if (wrap) {
+      const inner = wrap.querySelector(".well-table-wrap > div:last-child");
+      const arrowEl = wrap.querySelector(".arrow");
+      if (inner) inner.style.display = "";
+      if (arrowEl) arrowEl.className = "arrow open";
+      const plate = state.plates.find(p => p.id === pid);
+      if (plate) refreshWellTable(plate);
+    }
+  }
+  updateSelectionInfo();
+}
+
+function buildPlateBlock(plate) {
+  const block = document.createElement("div");
+  block.className = "plate-block";
+
+  const header = document.createElement("div");
+  header.className = "plate-block-header";
+
+  const nameInp = document.createElement("input");
+  nameInp.type = "text";
+  nameInp.className = "plate-name-input";
+  nameInp.value = plate.name;
+  nameInp.addEventListener("input", e => { plate.name = e.target.value; autosave(); });
+  header.appendChild(nameInp);
+
+  const typeSel = document.createElement("select");
+  typeSel.className = "plate-type-select";
+  [6,12,24,48,96].forEach(n => {
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = n + " well";
+    if (n === plate.type) opt.selected = true;
+    typeSel.appendChild(opt);
+  });
+  typeSel.addEventListener("change", e => {
+    plate.type = Number(e.target.value);
+    plate.selected.clear();
+    renderSinglePlate(plate);
+    autosave();
+  });
+  header.appendChild(typeSel);
+
+  const spacer = document.createElement("div");
+  spacer.style.flex = "1";
+  header.appendChild(spacer);
+
+  const dupBtn = document.createElement("button");
+  dupBtn.textContent = "Duplicate";
+  dupBtn.title = "このプレートを複製";
+  dupBtn.addEventListener("click", () => duplicatePlate(plate.id));
+  header.appendChild(dupBtn);
+
+  if (state.plates.length > 1) {
+    const delBtn = document.createElement("button");
+    delBtn.className = "danger";
+    delBtn.textContent = "×";
+    delBtn.title = "削除";
+    delBtn.addEventListener("click", () => deletePlate(plate.id));
+    header.appendChild(delBtn);
+  }
+
+  block.appendChild(header);
+
+  // body: notes (left) + plate svg (right)
+  const body = document.createElement("div");
+  body.className = "plate-body";
+
+  const notesPanel = document.createElement("div");
+  notesPanel.className = "plate-notes-panel " + ((plate.notesPos && plate.notesPos.floating) ? "floating" : "docked");
+  if (plate.notesPos && plate.notesPos.floating) {
+    notesPanel.style.left = (plate.notesPos.left || 0) + "px";
+    notesPanel.style.top = (plate.notesPos.top || 0) + "px";
+    if (plate.notesPos.width) notesPanel.style.width = plate.notesPos.width + "px";
+  }
+
+  const handle = document.createElement("div");
+  handle.className = "plate-notes-handle";
+  const handleLabel = document.createElement("span");
+  handleLabel.innerHTML = '<span class="dots"></span>SAMPLE NOTES';
+  handle.appendChild(handleLabel);
+  const dockBtn = document.createElement("button");
+  dockBtn.textContent = "Dock";
+  dockBtn.title = "左側に戻す";
+  dockBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    notesPanel.classList.remove("floating");
+    notesPanel.classList.add("docked");
+    notesPanel.style.left = "";
+    notesPanel.style.top = "";
+    notesPanel.style.width = "";
+    plate.notesPos = { floating: false };
+    autosave();
+  });
+  handle.appendChild(dockBtn);
+  notesPanel.appendChild(handle);
+
+  const notes = document.createElement("textarea");
+  notes.className = "plate-notes";
+  notes.placeholder = "サンプル情報・メモ\n(例: 細胞株, 継代数, 培地,\nseeding density, 処理時間など)";
+  notes.value = plate.notes || "";
+  notes.addEventListener("input", e => { plate.notes = e.target.value; autosave(); });
+  notesPanel.appendChild(notes);
+
+  // Drag logic for the notes panel
+  initNotesDrag(notesPanel, handle, body, plate);
+
+  body.appendChild(notesPanel);
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "plate");
+  svg.setAttribute("data-plate-id", plate.id);
+  const svgWrap = document.createElement("div");
+  svgWrap.className = "plate-svg-wrap";
+  svgWrap.appendChild(svg);
+  body.appendChild(svgWrap);
+
+  block.appendChild(body);
+
+  // Well Memo Table
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "well-table-wrap";
+  tableWrap.setAttribute("data-plate-table", plate.id);
+
+  const toggle = document.createElement("div");
+  toggle.className = "well-table-toggle";
+  const arrow = document.createElement("span");
+  arrow.className = "arrow";
+  arrow.textContent = "▶";
+  toggle.appendChild(arrow);
+  const toggleLabel = document.createElement("span");
+  toggleLabel.textContent = "Well Memos";
+  toggle.appendChild(toggleLabel);
+
+  const tableInner = document.createElement("div");
+  tableInner.style.display = "none";
+  toggle.addEventListener("click", () => {
+    const open = tableInner.style.display === "none";
+    tableInner.style.display = open ? "" : "none";
+    arrow.className = "arrow" + (open ? " open" : "");
+    if (open) refreshWellTable(plate);
+  });
+  tableWrap.appendChild(toggle);
+
+  // Filter: show only wells with data
+  const filterDiv = document.createElement("div");
+  filterDiv.className = "well-table-filter";
+  const filterCb = document.createElement("input");
+  filterCb.type = "checkbox";
+  filterCb.id = "filter-" + plate.id;
+  filterCb.checked = true;
+  const filterLbl = document.createElement("label");
+  filterLbl.htmlFor = filterCb.id;
+  filterLbl.textContent = "条件またはメモがあるWellのみ表示";
+  filterCb.addEventListener("change", () => refreshWellTable(plate));
+  filterDiv.appendChild(filterCb);
+  filterDiv.appendChild(filterLbl);
+  tableInner.appendChild(filterDiv);
+
+  const scrollDiv = document.createElement("div");
+  scrollDiv.className = "well-table-scroll";
+  const table = document.createElement("table");
+  table.className = "well-memo-table";
+  table.setAttribute("data-memo-table", plate.id);
+  scrollDiv.appendChild(table);
+  tableInner.appendChild(scrollDiv);
+
+  tableWrap.appendChild(tableInner);
+  block.appendChild(tableWrap);
+
+  return block;
+}
+
+function refreshWellTable(plate) {
+  const table = document.querySelector(`table[data-memo-table="${plate.id}"]`);
+  if (!table) return;
+  const wrap = table.closest(".well-table-wrap");
+  const filterCb = wrap ? wrap.querySelector("input[type=checkbox]") : null;
+  const filterActive = filterCb ? filterCb.checked : true;
+
+  table.innerHTML = "";
+  const thead = document.createElement("thead");
+  const hRow = document.createElement("tr");
+  ["Well", "Conditions", "Memo"].forEach(t => {
+    const th = document.createElement("th");
+    th.textContent = t;
+    hRow.appendChild(th);
+  });
+  thead.appendChild(hRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  const { rows, cols } = PLATE_LAYOUTS[plate.type];
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const wid = wellId(r, c);
+      const wellData = plate.wells[wid] || {};
+      const memo = (plate.wellMemos || {})[wid] || "";
+      const activeAxes = state.axes.filter(a => wellData[a.id]);
+      const hasData = activeAxes.length > 0 || memo.trim() !== "";
+      if (filterActive && !hasData) continue;
+
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-well-row", wid);
+      if (plate.selected.has(wid)) tr.classList.add("highlighted");
+
+      // Well ID
+      const tdId = document.createElement("td");
+      tdId.className = "well-id-cell";
+      tdId.textContent = wid;
+      tr.appendChild(tdId);
+
+      // Conditions
+      const tdCond = document.createElement("td");
+      tdCond.className = "condition-cell";
+      activeAxes.forEach(axis => {
+        const v = axis.values.find(vv => vv.id === wellData[axis.id]);
+        if (!v) return;
+        const chip = document.createElement("span");
+        chip.className = "cond-chip";
+        chip.style.backgroundColor = v.color;
+        chip.style.color = isDark(v.color) ? "#fff" : "#0f172a";
+        chip.textContent = v.label;
+        tdCond.appendChild(chip);
+      });
+      tr.appendChild(tdCond);
+
+      // Memo input
+      const tdMemo = document.createElement("td");
+      tdMemo.className = "memo-cell";
+      const memoInput = document.createElement("input");
+      memoInput.type = "text";
+      memoInput.value = memo;
+      memoInput.placeholder = "メモ…";
+      memoInput.addEventListener("input", e => {
+        if (!plate.wellMemos) plate.wellMemos = {};
+        plate.wellMemos[wid] = e.target.value;
+        autosave();
+      });
+      memoInput.addEventListener("change", () => pushHistory());
+      tdMemo.appendChild(memoInput);
+      tr.appendChild(tdMemo);
+
+      // Click row to select well
+      tr.addEventListener("click", e => {
+        if (e.target.tagName === "INPUT") return;
+        toggleWell(plate, wid, e.shiftKey || e.metaKey || e.ctrlKey);
+        refreshWellTable(plate);
+      });
+
+      tbody.appendChild(tr);
+    }
+  }
+  table.appendChild(tbody);
+}
+
+function initNotesDrag(panel, handle, container, plate) {
+  let drag = null;
+  handle.addEventListener("mousedown", e => {
+    if (e.target.closest("button")) return;
+    if (e.button !== 0) return;
+
+    // Convert docked → floating if needed
+    if (panel.classList.contains("docked")) {
+      const panelRect = panel.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      panel.classList.remove("docked");
+      panel.classList.add("floating");
+      panel.style.left = (panelRect.left - containerRect.left) + "px";
+      panel.style.top = (panelRect.top - containerRect.top) + "px";
+      panel.style.width = panelRect.width + "px";
+    }
+
+    const rect = panel.getBoundingClientRect();
+    drag = {
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+    };
+    e.preventDefault();
+  });
+  document.addEventListener("mousemove", e => {
+    if (!drag) return;
+    const containerRect = container.getBoundingClientRect();
+    const left = e.clientX - containerRect.left - drag.offsetX;
+    const top = e.clientY - containerRect.top - drag.offsetY;
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+  });
+  document.addEventListener("mouseup", () => {
+    if (!drag) return;
+    drag = null;
+    plate.notesPos = {
+      floating: true,
+      left: parseFloat(panel.style.left) || 0,
+      top: parseFloat(panel.style.top) || 0,
+      width: parseFloat(panel.style.width) || 240,
+    };
+    autosave();
+  });
+}
+
+function addPlate() {
+  const last = state.plates[state.plates.length - 1];
+  const p = makePlate(last ? last.type : 24);
+  state.plates.push(p);
+  renderAllPlates(); autosave();
+}
+
+function duplicatePlate(id) {
+  const src = state.plates.find(p => p.id === id);
+  if (!src) return;
+  const copy = {
+    id: uid("pl"),
+    name: src.name + " copy",
+    type: src.type,
+    wells: JSON.parse(JSON.stringify(src.wells)),
+    wellMemos: JSON.parse(JSON.stringify(src.wellMemos || {})),
+    notes: src.notes || "",
+    notesPos: src.notesPos ? JSON.parse(JSON.stringify(src.notesPos)) : null,
+    selected: new Set(),
+  };
+  const idx = state.plates.indexOf(src);
+  state.plates.splice(idx + 1, 0, copy);
+  renderAllPlates(); autosave();
+}
+
+function deletePlate(id) {
+  if (state.plates.length <= 1) return;
+  if (!confirm("このプレートを削除しますか？")) return;
+  const idx = state.plates.findIndex(p => p.id === id);
+  if (idx < 0) return;
+  state.plates.splice(idx, 1);
+  renderAllPlates(); autosave();
+}
+
+function renderAll() {
+  renderAllPlates();
+  renderAxes();
+  renderLegend();
+}
+
+//============================================================
+// Export: PNG — mirrors on-screen layout (notes left, plate center, legend right)
+//============================================================
+async function exportPNG() {
+  const scale = 2;
+  const pad = 24;
+  const titleH = 36;
+  const plateGap = 24;
+  const notesW = 200;
+  const notesGap = 12;
+  const legendW = 180;
+  const legendGap = 16;
+  const lineH = 15;
+
+  // Pre-compute plate images
+  const plateData = [];
+  for (const p of state.plates) {
+    const svg = document.querySelector(`svg.plate[data-plate-id="${p.id}"]`);
+    if (!svg) continue;
+    const clone = svg.cloneNode(true);
+    const m = plateMetrics(p.type);
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("x", 0); bg.setAttribute("y", 0);
+    bg.setAttribute("width", m.width); bg.setAttribute("height", m.height);
+    bg.setAttribute("fill", "#ffffff");
+    clone.insertBefore(bg, clone.firstChild);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg64 = btoa(unescape(encodeURIComponent(xml)));
+    const img = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.src = "data:image/svg+xml;base64," + svg64; });
+    const noteLines = wrapText(p.notes || "", notesW - 16, "12px -apple-system, sans-serif");
+    plateData.push({ plate: p, img, m, noteLines });
+  }
+
+  // Legend lines for right panel
+  const legendBlocks = state.axes.map(axis => {
+    return { name: axis.name, items: axis.values.map(v => ({ label: v.label, color: v.color, comment: v.comment || "" })) };
+  });
+  let legendTotalH = 0;
+  for (const b of legendBlocks) legendTotalH += 18 + b.items.length * 20 + 10;
+
+  // Project notes
+  const projLines = wrapText(state.projectNotes || "", 600, "12px -apple-system, sans-serif");
+  const projH = projLines.length ? (projLines.length * lineH + 28) : 0;
+
+  // Compute overall canvas size
+  const hasNotes = plateData.some(d => d.noteLines.length > 0);
+  const leftColW = hasNotes ? (notesW + notesGap) : 0;
+  const maxPlateW = Math.max(...plateData.map(d => d.m.width), 300);
+  const rightColW = legendBlocks.length ? (legendGap + legendW) : 0;
+  const contentW = leftColW + maxPlateW + rightColW;
+  const canvasW = contentW + pad * 2;
+
+  let totalH = titleH;
+  for (const d of plateData) {
+    const plateH = Math.max(d.m.height, d.noteLines.length * lineH + 30);
+    totalH += 22 + plateH + plateGap;
+  }
+  totalH += projH + pad;
+  const canvasH = totalH + pad;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasW * scale;
+  canvas.height = canvasH * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  // Title
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "600 18px -apple-system, sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillText(state.projectName, pad, pad);
+  ctx.fillStyle = "#64748b";
+  ctx.font = "12px -apple-system, sans-serif";
+  ctx.fillText(new Date().toLocaleDateString(), pad + ctx.measureText(state.projectName + "  ").width + 10, pad + 4);
+
+  let y = pad + titleH;
+  const plateStartY = y;
+
+  for (const d of plateData) {
+    // Plate name
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "600 14px -apple-system, sans-serif";
+    ctx.fillText(d.plate.name + "  (" + d.plate.type + " well)", pad + leftColW, y);
+    y += 22;
+
+    // Notes panel (left)
+    if (d.noteLines.length > 0) {
+      const notesH = d.noteLines.length * lineH + 20;
+      const nx = pad;
+      const ny = y;
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(nx, ny, notesW, notesH);
+      ctx.strokeStyle = "#d8dde5";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(nx + 0.5, ny + 0.5, notesW, notesH);
+      // Header
+      ctx.fillStyle = "#eef2f7";
+      ctx.fillRect(nx + 1, ny + 1, notesW - 1, 16);
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "600 9px -apple-system, sans-serif";
+      ctx.fillText("SAMPLE NOTES", nx + 6, ny + 4);
+      // Notes body
+      ctx.fillStyle = "#334155";
+      ctx.font = "12px -apple-system, sans-serif";
+      let tny = ny + 22;
+      for (const line of d.noteLines) {
+        ctx.fillText(line, nx + 8, tny);
+        tny += lineH;
+      }
+    }
+
+    // Plate SVG (center)
+    ctx.drawImage(d.img, pad + leftColW, y, d.m.width, d.m.height);
+
+    const plateH = Math.max(d.m.height, (d.noteLines.length * lineH + 30));
+    y += plateH + plateGap;
+  }
+
+  // Legend (right side, aligned with first plate)
+  if (legendBlocks.length > 0) {
+    const lx = pad + leftColW + maxPlateW + legendGap;
+    let ly = plateStartY;
+    for (const b of legendBlocks) {
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "700 12px -apple-system, sans-serif";
+      ctx.fillText(b.name, lx, ly);
+      ly += 18;
+      for (const item of b.items) {
+        ctx.fillStyle = item.color;
+        ctx.fillRect(lx, ly, 14, 14);
+        ctx.strokeStyle = "rgba(0,0,0,0.15)";
+        ctx.strokeRect(lx + 0.5, ly + 0.5, 14, 14);
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "12px -apple-system, sans-serif";
+        ctx.fillText(item.label, lx + 20, ly + 2);
+        ly += 16;
+        if (item.comment) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "italic 10px -apple-system, sans-serif";
+          ctx.fillText(item.comment, lx + 20, ly);
+          ly += 14;
+        }
+        ly += 4;
+      }
+      ly += 10;
+    }
+  }
+
+  // Project notes (bottom)
+  if (projLines.length) {
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pad, y - 6); ctx.lineTo(canvasW - pad, y - 6); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#475569";
+    ctx.font = "600 11px -apple-system, sans-serif";
+    ctx.fillText("PROJECT NOTES", pad, y + 4);
+    y += 22;
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "12px -apple-system, sans-serif";
+    for (const line of projLines) {
+      ctx.fillText(line, pad, y);
+      y += lineH;
+    }
+  }
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (state.projectName || "plates") + ".png";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+// Utility: word-wrap text to fit a given pixel width
+function wrapText(text, maxWidth, fontSpec) {
+  if (!text) return [];
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.font = fontSpec;
+  const result = [];
+  for (const rawLine of text.split("\n")) {
+    if (!rawLine) { result.push(""); continue; }
+    let current = "";
+    for (const ch of rawLine) {
+      if (ctx.measureText(current + ch).width > maxWidth && current.length > 0) {
+        result.push(current);
+        current = ch;
+      } else {
+        current += ch;
+      }
+    }
+    if (current) result.push(current);
+  }
+  return result;
+}
+
+function computeLegendLines() {
+  const lines = [];
+  for (const axis of state.axes) {
+    const line = [{ type: "axis", text: axis.name }];
+    for (const v of axis.values) line.push({ type: "item", color: v.color, text: v.label });
+    lines.push(line);
+  }
+  return lines;
+}
+
+//============================================================
+// Export: PDF — mirrors on-screen layout
+//============================================================
+function exportPDF() {
+  const platesHTML = state.plates.map(p => {
+    const svgEl = document.querySelector(`svg.plate[data-plate-id="${p.id}"]`);
+    const xml = svgEl ? new XMLSerializer().serializeToString(svgEl) : "";
+    const notesHtml = (p.notes || "").trim()
+      ? `<div class="notes-panel">
+           <div class="notes-header">SAMPLE NOTES</div>
+           <div class="notes-body">${escapeHtml(p.notes).replace(/\n/g, "<br>")}</div>
+         </div>`
+      : "";
+    // Well memo table (only wells with conditions or memos)
+    const { rows, cols } = PLATE_LAYOUTS[p.type];
+    let memoRows = "";
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const wid = wellId(r, c);
+        const wd = p.wells[wid] || {};
+        const memo = (p.wellMemos || {})[wid] || "";
+        const activeAxes = state.axes.filter(a => wd[a.id]);
+        if (activeAxes.length === 0 && !memo.trim()) continue;
+        const chips = activeAxes.map(axis => {
+          const v = axis.values.find(vv => vv.id === wd[axis.id]);
+          if (!v) return "";
+          const txtCol = isDark(v.color) ? "#fff" : "#0f172a";
+          return `<span style="display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;margin-right:2px;background-color:${v.color} !important;color:${txtCol};border:1px solid rgba(0,0,0,0.1);">${escapeHtml(v.label)}</span>`;
+        }).join("");
+        memoRows += `<tr><td style="font-weight:600;white-space:nowrap;width:36px;">${wid}</td><td style="white-space:nowrap;">${chips}</td><td>${escapeHtml(memo)}</td></tr>`;
+      }
+    }
+    const memoTableHtml = memoRows
+      ? `<div class="memo-table-block">
+           <div class="memo-table-title">WELL MEMOS</div>
+           <table class="memo-tbl">
+             <thead><tr><th>Well</th><th>Conditions</th><th>Memo</th></tr></thead>
+             <tbody>${memoRows}</tbody>
+           </table>
+         </div>`
+      : "";
+    return `<div class="plate-block">
+      <div class="plate-title">${escapeHtml(p.name)} <span class="type-label">(${p.type} well)</span></div>
+      <div class="plate-row">
+        ${notesHtml}
+        <div class="plate-svg">${xml}</div>
+      </div>
+      ${memoTableHtml}
+    </div>`;
+  }).join("");
+
+  const legendHTML = state.axes.map(axis => {
+    const items = axis.values.map(v => {
+      const commentHtml = v.comment ? `<div class="lcmt">${escapeHtml(v.comment)}</div>` : "";
+      return `<div class="legend-item">
+         <span class="lsw" style="background-color:${v.color} !important;"></span>
+         <span class="ll">${escapeHtml(v.label)}</span>
+         ${commentHtml}
+       </div>`;
+    }).join("");
+    return `<div class="legend-axis">
+              <div class="legend-axis-name">${escapeHtml(axis.name)}</div>
+              ${items}
+            </div>`;
+  }).join("");
+
+  const projectNotesHTML = (state.projectNotes || "").trim()
+    ? `<div class="project-notes">
+         <div class="pn-label">PROJECT NOTES</div>
+         <div class="pn-body">${escapeHtml(state.projectNotes).replace(/\n/g, "<br>")}</div>
+       </div>`
+    : "";
+
+  const now = new Date();
+  const ts = now.getFullYear()
+    + String(now.getMonth() + 1).padStart(2, "0")
+    + String(now.getDate()).padStart(2, "0")
+    + "_"
+    + String(now.getHours()).padStart(2, "0")
+    + String(now.getMinutes()).padStart(2, "0");
+  const pdfTitle = state.projectName + "_" + ts;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(pdfTitle)}</title>
+    <style>
+      * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; padding: 20px; color: #0f172a; margin: 0; }
+      h1 { font-size: 18px; margin: 0 0 2px 0; }
+      .meta { color: #64748b; font-size: 11px; margin-bottom: 18px; }
+      .main-layout { display: flex; gap: 18px; align-items: flex-start; }
+      .plates-col { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+      .legend-col { flex: 0 0 180px; padding: 10px 12px; background-color: #fafbfc !important; border: 1px solid #d8dde5; border-radius: 8px; }
+      .legend-axis { margin-bottom: 10px; }
+      .legend-axis-name { font-size: 12px; font-weight: 700; border-bottom: 1px solid #d8dde5; padding-bottom: 2px; margin-bottom: 4px; }
+      .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 2px 0; }
+      .lsw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .legend-item { flex-wrap: wrap; }
+      .ll { flex: 1; }
+      .lcmt { width: 100%; font-size: 9px; color: #64748b; font-style: italic; padding-left: 20px; line-height: 1.3; }
+      .plate-block { border: 1px solid #d8dde5; border-radius: 8px; padding: 10px; background: #fff; page-break-inside: avoid; }
+      .plate-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+      .type-label { font-size: 11px; color: #64748b; font-weight: normal; }
+      .plate-row { display: flex; gap: 10px; align-items: flex-start; }
+      .notes-panel { flex: 0 0 200px; background-color: #fafbfc !important; border: 1px solid #d8dde5; border-radius: 6px; overflow: hidden; }
+      .notes-header { background-color: #eef2f7 !important; padding: 4px 8px; font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #d8dde5; }
+      .notes-body { padding: 8px 10px; font-size: 11px; color: #334155; line-height: 1.5; }
+      .plate-svg { flex: 1; min-width: 0; }
+      .plate-svg svg { max-width: 100%; height: auto; }
+      .memo-table-block { margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+      .memo-table-title { font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+      .memo-tbl { width: 100%; border-collapse: collapse; font-size: 10px; }
+      .memo-tbl th { text-align: left; font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; padding: 3px 5px; border-bottom: 1px solid #d8dde5; }
+      .memo-tbl td { padding: 2px 5px; border-bottom: 1px solid #f0f0f0; }
+      .project-notes { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #cbd5e1; }
+      .pn-label { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+      .pn-body { font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+      @page { margin: 10mm; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+    <h1>${escapeHtml(state.projectName)}</h1>
+    <div class="meta">${state.plates.length} plate${state.plates.length > 1 ? "s" : ""} &middot; ${new Date().toLocaleString()}</div>
+    <div class="main-layout">
+      <div class="plates-col">${platesHTML}</div>
+      ${legendHTML ? '<div class="legend-col">' + legendHTML + '</div>' : ''}
+    </div>
+    ${projectNotesHTML}
+    <script>window.addEventListener("load", () => setTimeout(() => window.print(), 300));<\/script>
+    </body></html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("ポップアップがブロックされました。許可してください。"); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+//============================================================
+// Save / Load JSON
+// Uses File System Access API when available so save & load
+// share the same directory (default: Downloads).
+//============================================================
+let _lastDirHandle = null; // Remembered between save/load to keep them in sync
+let _baseName = null;      // Filename base after first save or after load (no .json, no _revN)
+let _revCount = 0;         // Next save's revision number (0 = no suffix)
+
+function todayMMDDYY() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const yy = String(d.getFullYear() % 100).padStart(2, "0");
+  return mm + dd + yy;
+}
+
+function getSuggestedFilename() {
+  if (_baseName === null) return todayMMDDYY() + ".json";
+  if (_revCount === 0) return _baseName + ".json";
+  return _baseName + "_rev" + _revCount + ".json";
+}
+
+function parseLoadedFilename(name) {
+  let base = String(name || "").replace(/\.json$/i, "");
+  const m = base.match(/^(.*)_rev(\d+)$/i);
+  if (m) return { base: m[1], rev: parseInt(m[2], 10) };
+  return { base: base, rev: 0 };
+}
+
+async function saveJSON() {
+  const data = JSON.stringify(serializeState(), null, 2);
+  const filename = getSuggestedFilename();
+
+  if (window.showSaveFilePicker) {
+    try {
+      const opts = {
+        suggestedName: filename,
+        types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
+      };
+      // Start in last-used dir if we have it, else Downloads
+      if (_lastDirHandle) opts.startIn = _lastDirHandle;
+      else opts.startIn = "downloads";
+      const handle = await window.showSaveFilePicker(opts);
+      const writable = await handle.createWritable();
+      await writable.write(data);
+      await writable.close();
+      // Remember the directory for next time
+      try {
+        const parent = await handle.getParent?.();
+        if (parent) _lastDirHandle = parent;
+      } catch(_) {}
+      // Adopt the actual saved filename as the new base for future revisions
+      const parsed = parseLoadedFilename(handle.name || filename);
+      _baseName = parsed.base;
+      _revCount = parsed.rev + 1;
+      return true;
+    } catch (err) {
+      if (err && err.name === "AbortError") return false; // user cancelled
+      // Fall through to anchor-download fallback
+      console.warn("showSaveFilePicker failed, falling back:", err);
+    }
+  }
+
+  // Fallback: triggers browser default download folder
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  // We can't know what name the user actually chose; bump using suggested
+  const parsed = parseLoadedFilename(filename);
+  _baseName = parsed.base;
+  _revCount = parsed.rev + 1;
+  return true;
+}
+
+async function openJSON() {
+  if (window.showOpenFilePicker) {
+    try {
+      const opts = {
+        types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
+        multiple: false,
+      };
+      if (_lastDirHandle) opts.startIn = _lastDirHandle;
+      else opts.startIn = "downloads";
+      const [handle] = await window.showOpenFilePicker(opts);
+      const file = await handle.getFile();
+      try {
+        const parent = await handle.getParent?.();
+        if (parent) _lastDirHandle = parent;
+      } catch(_) {}
+      loadJSONFile(file);
+      return;
+      // (loadJSONFile sets _baseName / _revCount from file.name)
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+      console.warn("showOpenFilePicker failed, falling back:", err);
+    }
+  }
+  // Fallback to <input type=file>
+  document.getElementById("file-input").click();
+}
+
+function loadJSONFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const obj = JSON.parse(e.target.result);
+      if (loadFromObject(obj)) {
+        // Adopt the loaded file's name as the base; next save bumps to _rev(N+1)
+        const parsed = parseLoadedFilename(file.name);
+        _baseName = parsed.base;
+        _revCount = parsed.rev + 1;
+        autosave(); pushHistory();
+      } else {
+        alert("ファイルを読み込めませんでした。");
+      }
+    } catch (err) {
+      alert("JSONの読み込みに失敗しました: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+//============================================================
+// New Project
+//============================================================
+async function newProject() {
+  // Detect whether the current state has any meaningful content
+  const hasContent =
+    state.plates.some(p => Object.keys(p.wells || {}).length > 0
+                           || Object.keys(p.wellMemos || {}).length > 0
+                           || (p.notes && p.notes.trim() !== ""))
+    || state.axes.length > 0
+    || (state.projectNotes && state.projectNotes.trim() !== "")
+    || (state.projectName && state.projectName !== "Untitled Protocol");
+
+  if (hasContent) {
+    const choice = confirm("現在の内容を保存しますか？\n\n[OK] 保存してから新規作成\n[キャンセル] 保存しないで続行（破棄するか中止を選択できます）");
+    if (choice) {
+      await saveJSON();
+    } else {
+      const proceed = confirm("保存せずに新規作成しますか？\n現在の内容は失われます。");
+      if (!proceed) return;
+    }
+  }
+
+  // Reset state
+  state.projectName = "Untitled Protocol";
+  state.plates = [makePlate(24, "Plate 1")];
+  state.axes = [];
+  state.projectNotes = "";
+  state.font = { family: "system", size: "auto", weight: "400" };
+
+  // Reset filename tracking → next save defaults to today's date
+  _baseName = null;
+  _revCount = 0;
+
+  document.getElementById("project-name").value = state.projectName;
+  document.getElementById("project-notes").value = "";
+  document.getElementById("font-family").value = "system";
+  document.getElementById("font-size").value = "auto";
+  document.getElementById("font-weight").value = "400";
+
+  renderAxes();
+  renderAllPlates();
+  renderLegend();
+  autosave();
+  // Reset history with the fresh state
+  _history = [];
+  _historyIdx = -1;
+  pushHistory();
+}
+
+//============================================================
+// Wire up
+//============================================================
+document.getElementById("btn-add-axis").addEventListener("click", addAxis);
+document.getElementById("btn-add-plate").addEventListener("click", addPlate);
+document.getElementById("btn-select-all").addEventListener("click", selectAllEverywhere);
+document.getElementById("btn-clear-selection").addEventListener("click", clearAllSelection);
+document.getElementById("btn-clear-wells").addEventListener("click", clearSelectedWellsEverywhere);
+document.getElementById("project-notes").addEventListener("input", e => {
+  state.projectNotes = e.target.value; autosave();
+});
+document.getElementById("project-name").addEventListener("input", e => {
+  state.projectName = e.target.value;
+  autosave();
+});
+document.getElementById("btn-new").addEventListener("click", newProject);
+document.getElementById("btn-save").addEventListener("click", saveJSON);
+document.getElementById("btn-load").addEventListener("click", openJSON);
+document.getElementById("file-input").addEventListener("change", e => {
+  const f = e.target.files[0]; if (f) loadJSONFile(f);
+  e.target.value = "";
+});
+document.getElementById("btn-export-png").addEventListener("click", exportPNG);
+document.getElementById("btn-export-pdf").addEventListener("click", exportPDF);
+
+document.getElementById("font-family").addEventListener("change", e => {
+  state.font.family = e.target.value; renderAllPlates(); autosave();
+});
+document.getElementById("font-size").addEventListener("change", e => {
+  state.font.size = e.target.value === "auto" ? "auto" : Number(e.target.value);
+  renderAllPlates(); autosave();
+});
+document.getElementById("font-weight").addEventListener("change", e => {
+  state.font.weight = e.target.value; renderAllPlates(); autosave();
+});
+
+document.getElementById("popover-color-input").addEventListener("input", e => {
+  document.getElementById("popover-hex-input").value = e.target.value.toUpperCase();
+});
+document.getElementById("popover-color-input").addEventListener("change", e => {
+  pickColor(e.target.value);
+});
+document.getElementById("popover-hex-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    const v = normalizeHex(e.target.value);
+    pickColor(v);
+  }
+});
+
+// Keyboard shortcuts
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape") { clearAllSelection(); return; }
+  // Undo: Cmd+Z (Mac) or Ctrl+Z (Win)
+  if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+    e.preventDefault();
+    undo();
+    return;
+  }
+  // Redo: Cmd+Shift+Z or Ctrl+Shift+Z or Ctrl+Y
+  if ((e.key === "z" && (e.metaKey || e.ctrlKey) && e.shiftKey) ||
+      (e.key === "y" && e.ctrlKey)) {
+    e.preventDefault();
+    redo();
+    return;
+  }
+});
+
+//============================================================
+// Init
+//============================================================
+initLegendDrag();
+if (!tryRestoreAutosave()) {
+  const p = makePlate(24, "Plate 1");
+  state.plates.push(p);
+  addAxis();
+}
+if (state.plates.length === 0) {
+  state.plates.push(makePlate(24, "Plate 1"));
+}
+document.getElementById("project-notes").value = state.projectNotes || "";
+document.getElementById("version-badge").textContent = "v" + APP_VERSION;
+renderAll();
+// Seed initial history snapshot
+pushHistory();
+</script>
+</body>
+</html>
