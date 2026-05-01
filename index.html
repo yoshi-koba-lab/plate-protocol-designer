@@ -814,6 +814,7 @@
   <input type="text" id="project-name" placeholder="プロトコール名" value="Untitled Protocol">
   <div class="spacer"></div>
   <button id="btn-new">新規作成</button>
+  <button id="btn-folder" title="保存・読込のデフォルトフォルダを設定">📁 <span id="btn-folder-label">フォルダ未設定</span></button>
   <button id="btn-save">保存 (JSON)</button>
   <button id="btn-load">読込 (JSON)</button>
   <input type="file" id="file-input" accept="application/json" style="display:none">
@@ -935,7 +936,8 @@ const FONT_FAMILIES = {
 // 1.0.15 Smart default filename: MMDDYY first, then <base>_revN after save/load
 // 1.0.16 Auto row/column common-condition labels outside the plate grid
 // 1.0.17 Reorder Axes via drag-handle or up/down buttons
-const APP_VERSION = "1.0.17";
+// 1.0.18 Persistent "project folder" — save/load default to a chosen folder
+const APP_VERSION = "1.0.18";
 
 const state = {
   projectName: "Untitled Protocol",
@@ -2641,9 +2643,123 @@ function escapeHtml(s) {
 // Uses File System Access API when available so save & load
 // share the same directory (default: Downloads).
 //============================================================
-let _lastDirHandle = null; // Remembered between save/load to keep them in sync
-let _baseName = null;      // Filename base after first save or after load (no .json, no _revN)
-let _revCount = 0;         // Next save's revision number (0 = no suffix)
+let _lastDirHandle = null;     // Remembered between save/load to keep them in sync
+let _projectDirHandle = null;  // User-chosen "project folder" persisted in IndexedDB
+let _baseName = null;          // Filename base after first save or after load (no .json, no _revN)
+let _revCount = 0;             // Next save's revision number (0 = no suffix)
+
+//-- IndexedDB helpers for persisting the chosen project folder ---------
+function openHandleDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("plate-designer-fs", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("handles");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function getStoredDirHandle() {
+  try {
+    const db = await openHandleDB();
+    return await new Promise((res, rej) => {
+      const tx = db.transaction("handles", "readonly");
+      const req = tx.objectStore("handles").get("projectDir");
+      req.onsuccess = () => res(req.result || null);
+      req.onerror = () => rej(req.error);
+    });
+  } catch (_) { return null; }
+}
+async function setStoredDirHandle(handle) {
+  try {
+    const db = await openHandleDB();
+    return await new Promise((res, rej) => {
+      const tx = db.transaction("handles", "readwrite");
+      tx.objectStore("handles").put(handle, "projectDir");
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+  } catch (_) {}
+}
+async function clearStoredDirHandle() {
+  try {
+    const db = await openHandleDB();
+    return await new Promise((res, rej) => {
+      const tx = db.transaction("handles", "readwrite");
+      tx.objectStore("handles").delete("projectDir");
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+  } catch (_) {}
+}
+
+function updateProjectFolderIndicator() {
+  const lbl = document.getElementById("btn-folder-label");
+  if (!lbl) return;
+  if (_projectDirHandle) lbl.textContent = _projectDirHandle.name;
+  else lbl.textContent = "フォルダ未設定";
+}
+
+async function pickProjectFolder() {
+  if (!window.showDirectoryPicker) {
+    alert("お使いのブラウザはフォルダ選択APIに対応していません。\n（Chrome / Edge / Opera 推奨）");
+    return null;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+    await setStoredDirHandle(handle);
+    _projectDirHandle = handle;
+    updateProjectFolderIndicator();
+    return handle;
+  } catch (err) {
+    if (err && err.name === "AbortError") return null;
+    console.warn("pickProjectFolder failed:", err);
+    return null;
+  }
+}
+
+async function ensureProjectFolderPermission(mode = "readwrite") {
+  if (!_projectDirHandle) return null;
+  try {
+    const q = await _projectDirHandle.queryPermission({ mode });
+    if (q === "granted") return _projectDirHandle;
+    const r = await _projectDirHandle.requestPermission({ mode });
+    if (r === "granted") return _projectDirHandle;
+  } catch (_) {}
+  return null;
+}
+
+// Resolve the directory to start the file picker in.
+// Priority: project folder (with permission) → last-used → Downloads.
+async function resolveStartDir(mode = "readwrite") {
+  const pf = await ensureProjectFolderPermission(mode);
+  if (pf) return pf;
+  if (_lastDirHandle) return _lastDirHandle;
+  return "downloads";
+}
+
+async function clearProjectFolder() {
+  _projectDirHandle = null;
+  await clearStoredDirHandle();
+  updateProjectFolderIndicator();
+}
+
+async function changeProjectFolder() {
+  // If already set, ask whether to change/clear
+  if (_projectDirHandle) {
+    const choice = confirm(
+      `現在のプロジェクトフォルダ: ${_projectDirHandle.name}\n\n` +
+      `[OK] 別のフォルダを選択\n` +
+      `[キャンセル] 現状のまま（フォルダ設定を解除したい場合は再度キャンセルしてください）`
+    );
+    if (!choice) {
+      // Offer to clear
+      if (confirm("フォルダ設定を解除しますか？\n（保存・読込ダイアログはDownloadsから開始されるようになります）")) {
+        await clearProjectFolder();
+      }
+      return;
+    }
+  }
+  await pickProjectFolder();
+}
 
 function todayMMDDYY() {
   const d = new Date();
@@ -2676,9 +2792,8 @@ async function saveJSON() {
         suggestedName: filename,
         types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
       };
-      // Start in last-used dir if we have it, else Downloads
-      if (_lastDirHandle) opts.startIn = _lastDirHandle;
-      else opts.startIn = "downloads";
+      // Priority: project folder → last-used → Downloads
+      opts.startIn = await resolveStartDir("readwrite");
       const handle = await window.showSaveFilePicker(opts);
       const writable = await handle.createWritable();
       await writable.write(data);
@@ -2722,8 +2837,7 @@ async function openJSON() {
         types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
         multiple: false,
       };
-      if (_lastDirHandle) opts.startIn = _lastDirHandle;
-      else opts.startIn = "downloads";
+      opts.startIn = await resolveStartDir("read");
       const [handle] = await window.showOpenFilePicker(opts);
       const file = await handle.getFile();
       try {
@@ -2829,6 +2943,7 @@ document.getElementById("project-name").addEventListener("input", e => {
   autosave();
 });
 document.getElementById("btn-new").addEventListener("click", newProject);
+document.getElementById("btn-folder").addEventListener("click", changeProjectFolder);
 document.getElementById("btn-save").addEventListener("click", saveJSON);
 document.getElementById("btn-load").addEventListener("click", openJSON);
 document.getElementById("file-input").addEventListener("change", e => {
@@ -2897,6 +3012,15 @@ document.getElementById("version-badge").textContent = "v" + APP_VERSION;
 renderAll();
 // Seed initial history snapshot
 pushHistory();
+
+// Restore previously chosen project folder (handle persists in IndexedDB)
+(async () => {
+  const h = await getStoredDirHandle();
+  if (h) {
+    _projectDirHandle = h;
+    updateProjectFolderIndicator();
+  }
+})();
 </script>
 </body>
 </html>
